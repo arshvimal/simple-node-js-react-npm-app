@@ -1,23 +1,24 @@
 pipeline {
     agent {
-      docker { image 'node:18' }
+        docker {
+            image 'node:18'
+            args '-u root:root'
+        }
     }
     stages {
-        stage('Build') { 
+        stage('Install SSH') {
             steps {
-                sh 'npm install' 
+                sh 'apt-get update && apt-get install -y openssh-client rsync'
             }
         }
-        stage('Test') {
+        stage('Deploy') {
             steps {
-                sh './jenkins/scripts/test.sh'
-            }
-        }
-        stage('Deliver') { 
-            steps {
-                sh './jenkins/scripts/deliver.sh' 
-                input message: 'Finished using the web site? (Click "Proceed" to continue)' 
-                sh './jenkins/scripts/kill.sh' 
+                sshagent(['node2-ssh-key']) {
+                    sh '''
+                    ssh -o StrictHostKeyChecking=no arshvml@34.131.121.197 'echo Connected!'
+                    rsync -avz --delete ./ arshvml@34.131.121.197:/home/arshvml/simple-node-js-react-npm-app/
+                    '''
+                }
             }
         }
     }
